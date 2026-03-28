@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EV Charging Management System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1>EV Charging Management System</h1>
+            <p>Smart Grid-Aware Charging Scheduler with PSO Optimization</p>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <nav class="tabs">
+            <button class="tab-btn active" data-tab="user">User Portal</button>
+            <button class="tab-btn" data-tab="admin">Admin Panel</button>
+            <button class="tab-btn" data-tab="dashboard">Dashboard</button>
+        </nav>
+
+        <!-- User Portal Tab -->
+        <section id="user" class="tab-content active">
+            <div class="card">
+                <h2>Vehicle Lookup</h2>
+                <div class="search-box">
+                    <input type="text" id="vehicleId" placeholder="Enter Vehicle ID (e.g., EV_001)">
+                    <button id="searchBtn" class="btn btn-primary">Search</button>
+                </div>
+            </div>
+
+            <div id="vehicleResult" class="card hidden">
+                <h2>Vehicle Information</h2>
+                <div class="vehicle-info">
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <span class="label">Vehicle ID</span>
+                            <span id="v-id" class="value">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="label">Priority Score</span>
+                            <span id="v-priority" class="value priority-badge">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="label">Current SOC</span>
+                            <span id="v-current-soc" class="value">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="label">Target SOC</span>
+                            <span id="v-target-soc" class="value">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="label">Energy Needed</span>
+                            <span id="v-energy" class="value">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="label">Charging Window</span>
+                            <span id="v-window" class="value">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="scheduleResult" class="card hidden">
+                <h2>Optimized Charging Plan</h2>
+                <div class="schedule-info">
+                    <div class="info-grid">
+                        <div class="info-item highlight">
+                            <span class="label">Assigned Station</span>
+                            <span id="s-station" class="value">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="label">Charging Time</span>
+                            <span id="s-time" class="value">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="label">Total Energy</span>
+                            <span id="s-total-energy" class="value">-</span>
+                        </div>
+                        <div class="info-item solar">
+                            <span class="label">Solar Energy</span>
+                            <span id="s-solar-energy" class="value">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="label">Grid Energy</span>
+                            <span id="s-grid-energy" class="value">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="label">Est. Cost</span>
+                            <span id="s-cost" class="value">-</span>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="chargingChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Add New Vehicle</h2>
+                <form id="newVehicleForm" class="vehicle-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Vehicle Type</label>
+                            <input type="text" id="new-vehicle-type" placeholder="e.g., Tesla Model 3">
+                        </div>
+                        <div class="form-group">
+                            <label>Battery Capacity (kWh)</label>
+                            <input type="number" id="new-battery-capacity" value="75" min="20" max="150" step="0.1">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Efficiency (kWh/km)</label>
+                            <input type="number" id="new-efficiency" value="0.18" min="0.1" max="0.3" step="0.01">
+                        </div>
+                        <div class="form-group">
+                            <label>Current SOC</label>
+                            <input type="number" id="new-current-soc" value="0.3" min="0" max="1" step="0.01">
+                        </div>
+                        <div class="form-group">
+                            <label>Target SOC</label>
+                            <input type="number" id="new-target-soc" value="0.9" min="0" max="1" step="0.01">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Arrival (hour 0-23)</label>
+                            <input type="number" id="new-arrival-time" value="17" min="0" max="23">
+                        </div>
+                        <div class="form-group">
+                            <label>Departure (hour 0-23)</label>
+                            <input type="number" id="new-departure-time" value="20" min="0" max="23">
+                        </div>
+                        <div class="form-group">
+                            <label>Urgency (1-5)</label>
+                            <input type="number" id="new-urgency" value="3" min="1" max="5">
+                        </div>
+                        <div class="form-group">
+                            <label>Wait Time (min)</label>
+                            <input type="number" id="new-wait-time" value="15" min="0" max="120">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-success">Add Vehicle</button>
+                </form>
+                <div id="vehicleMessage" class="vehicle-message" style="display: none;"></div>
+            </div>
+
+            <div class="card">
+                <h2>All Vehicles</h2>
+                <div id="vehicleList" class="vehicle-list">
+                    <p class="loading">Loading vehicles...</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Admin Panel Tab -->
+        <section id="admin" class="tab-content">
+            <div class="admin-grid">
+                <div class="card">
+                    <h2>System Configuration</h2>
+                    <form id="configForm" class="config-form">
+                        <div class="form-group">
+                            <label>Transformer Capacity (kW)</label>
+                            <input type="number" id="cfg-transformer" value="500" min="100" max="2000">
+                        </div>
+                        <div class="form-group">
+                            <label>Max Grid Load (%)</label>
+                            <input type="number" id="cfg-max-load" value="80" min="50" max="100">
+                        </div>
+                        <div class="form-group">
+                            <label>Number of Stations</label>
+                            <input type="number" id="cfg-stations" value="10" min="1" max="50">
+                        </div>
+                        <div class="form-group">
+                            <label>Station Power (kW)</label>
+                            <input type="number" id="cfg-station-power" value="50" min="10" max="350">
+                        </div>
+                        <div class="form-group">
+                            <label>PSO Particles</label>
+                            <input type="number" id="cfg-particles" value="50" min="10" max="200">
+                        </div>
+                        <div class="form-group">
+                            <label>PSO Iterations</label>
+                            <input type="number" id="cfg-iterations" value="100" min="10" max="500">
+                        </div>
+                        <button type="submit" class="btn btn-primary">Update Configuration</button>
+                    </form>
+                </div>
+
+                <div class="card">
+                    <h2>Optimization Weights</h2>
+                    <form id="weightsForm" class="config-form">
+                        <div class="form-group">
+                            <label>Grid Overload Weight</label>
+                            <input type="range" id="weight-grid" min="0" max="100" value="40">
+                            <span id="weight-grid-val">0.40</span>
+                        </div>
+                        <div class="form-group">
+                            <label>Solar Usage Weight</label>
+                            <input type="range" id="weight-solar" min="0" max="100" value="35">
+                            <span id="weight-solar-val">0.35</span>
+                        </div>
+                        <div class="form-group">
+                            <label>Fairness Weight</label>
+                            <input type="range" id="weight-fairness" min="0" max="100" value="25">
+                            <span id="weight-fairness-val">0.25</span>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Update Weights</button>
+                    </form>
+                </div>
+
+                <div class="card">
+                    <h2>Station Status</h2>
+                    <div id="stationStatus" class="station-grid">
+                        <p class="loading">Loading stations...</p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>System Actions</h2>
+                    <div class="actions">
+                        <button id="runOptimization" class="btn btn-success">Run Optimization</button>
+                        <button id="resetSystem" class="btn btn-danger">Reset System</button>
+                    </div>
+                    <div id="actionResult" class="action-result hidden"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Dashboard Tab -->
+        <section id="dashboard" class="tab-content">
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <span class="metric-icon"></span>
+                    <span id="m-vehicles" class="metric-value">-</span>
+                    <span class="metric-label">Total Vehicles</span>
+                </div>
+                <div class="metric-card">
+                    <span class="metric-icon"></span>
+                    <span id="m-demand" class="metric-value">-</span>
+                    <span class="metric-label">Total Demand (kWh)</span>
+                </div>
+                <div class="metric-card solar">
+                    <span class="metric-icon"></span>
+                    <span id="m-solar" class="metric-value">-</span>
+                    <span class="metric-label">Solar Available (kWh)</span>
+                </div>
+                <div class="metric-card">
+                    <span class="metric-icon"></span>
+                    <span id="m-coverage" class="metric-value">-</span>
+                    <span class="metric-label">Solar Coverage</span>
+                </div>
+            </div>
+
+            <div class="charts-grid">
+                <div class="card">
+                    <h2>Load Profile</h2>
+                    <div class="chart-container">
+                        <canvas id="loadChart"></canvas>
+                    </div>
+                </div>
+                <div class="card">
+                    <h2>Optimization Metrics</h2>
+                    <div class="chart-container">
+                        <canvas id="metricsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Top Priority Schedules</h2>
+                <div id="topSchedules" class="schedules-table">
+                    <p class="loading">Loading schedules...</p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
